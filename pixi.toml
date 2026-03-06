@@ -1,0 +1,20 @@
+[project]
+name = "ext-drive-manager"
+version = "0.1.0"
+description = "Cold storage drive catalog system"
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-64", "osx-arm64"]
+
+[dependencies]
+python = ">=3.10"
+fastapi = ">=0.100.0"
+uvicorn = ">=0.23.0"
+sqlalchemy = ">=2.0.0"
+click = ">=8.1.0"
+jinja2 = ">=3.1.0"
+python-multipart = ">=0.0.6"
+aiofiles = ">=23.0.0"
+
+[tasks]
+serve = "uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
+cli = "python cli.py"
