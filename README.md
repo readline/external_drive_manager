@@ -40,7 +40,7 @@ cd external_drive_manager
 pixi install
 
 # Initialize the database (creates data/catalog.db automatically on first run)
-./cli.sh drive list
+./ext_drive_manager drive list
 ```
 
 ## Quick Start
@@ -50,19 +50,19 @@ pixi install
 Before adding a drive, detect its metadata:
 
 ```bash
-./cli.sh drive meta /mnt/your-drive
+./ext_drive_manager drive meta /mnt/your-drive
 ```
 
 ### 2. Add a Drive
 
 ```bash
-./cli.sh drive add 28T-02 --serial ABC123 --path /mnt/ext_2 --note "Backup drive for raw data"
+./ext_drive_manager drive add 28T-02 --serial ABC123 --path /mnt/ext_2 --note "Backup drive for raw data"
 ```
 
 ### 3. Scan the Drive
 
 ```bash
-./cli.sh drive scan 28T-02
+./ext_drive_manager drive scan 28T-02
 ```
 
 This will:
@@ -74,23 +74,23 @@ This will:
 
 ```bash
 # Search by pattern
-./cli.sh search "*.pdf"
+./ext_drive_manager search "*.pdf"
 
 # Search with filters
-./cli.sh search "*" --drive 28T-02 --min-size 1G
+./ext_drive_manager search "*" --drive 28T-02 --min-size 1G
 
 # Export results
-./cli.sh search "*.jpg" --export photos.csv
+./ext_drive_manager search "*.jpg" --export photos.csv
 ```
 
 ### 5. Check Disk Usage
 
 ```bash
 # Show all drives
-./cli.sh df
+./ext_drive_manager df
 
 # Show specific drive details
-./cli.sh du 28T-02
+./ext_drive_manager du 28T-02
 ```
 
 ## CLI Commands
@@ -99,48 +99,48 @@ This will:
 
 ```bash
 # Detect drive metadata
-./cli.sh drive meta /path/to/drive
+./ext_drive_manager drive meta /path/to/drive
 
 # Add a new drive
-./cli.sh drive add <label> --serial <serial> --path <path> --note <note>
+./ext_drive_manager drive add <label> --serial <serial> --path <path> --note <note>
 
 # List all drives
-./cli.sh drive list
+./ext_drive_manager drive list
 
 # Scan a drive
-./cli.sh drive scan <label> [--note <note>]
+./ext_drive_manager drive scan <label> [--note <note>]
 
 # View or set drive note
-./cli.sh drive note <label> [note_text] [--append, -a]
+./ext_drive_manager drive note <label> [note_text] [--append, -a]
 
 # Remove a drive
-./cli.sh drive remove <label>
+./ext_drive_manager drive remove <label>
 ```
 
 ### File Operations
 
 ```bash
 # Search files
-./cli.sh search <pattern> [--drive <label>] [--ext <ext>] [--min-size <size>] [--max-size <size>]
+./ext_drive_manager search <pattern> [--drive <label>] [--ext <ext>] [--min-size <size>] [--max-size <size>]
 
 # List files (like ls)
-./cli.sh ls <target> [-l] [-a] [-h]
+./ext_drive_manager ls <target> [-l] [-a] [-h]
 
 # Get file details
-./cli.sh file <file_id>
+./ext_drive_manager file <file_id>
 
 # Show catalog statistics
-./cli.sh stats
+./ext_drive_manager stats
 ```
 
 ### Disk Usage
 
 ```bash
 # Show all drives (like df)
-./cli.sh df
+./ext_drive_manager df
 
 # Show specific drive (like du)
-./cli.sh du <drive_label> [-h]
+./ext_drive_manager du <drive_label> [-h]
 ```
 
 ## Web Interface
@@ -169,7 +169,7 @@ The application uses SQLite for data storage. The database file (`data/catalog.d
 
 Simply run any CLI command:
 ```bash
-./cli.sh drive list
+./ext_drive_manager drive list
 ```
 
 Or start the web server:
@@ -187,8 +187,8 @@ The CLI supports human-readable size formats:
 
 Examples:
 ```bash
-./cli.sh search "*" --min-size 10G --max-size 100G
-./cli.sh search "*.mov" --min-size 500M
+./ext_drive_manager search "*" --min-size 10G --max-size 100G
+./ext_drive_manager search "*.mov" --min-size 500M
 ```
 
 ## Development
@@ -206,23 +206,26 @@ This project was developed using:
 ```
 external_drive_manager/
 ├── app/
-│   ├── api/           # FastAPI endpoints
-│   ├── templates/     # HTML templates
-│   ├── main.py        # FastAPI application
-│   ├── models.py      # SQLAlchemy models
-│   ├── schemas.py     # Pydantic schemas
-│   ├── crud.py        # Database operations
-│   ├── scanner.py     # Drive scanning logic
-│   └── database.py    # Database connection
-├── data/              # SQLite database (gitignored)
-├── cli.py             # CLI entry point
-├── config.py          # Configuration settings
-├── pixi.toml          # Pixi configuration
-├── run.sh             # Start web server
-├── cli.sh             # CLI wrapper
-├── migrate_db.py      # Database migration script
-└── README.md          # This file
+│   ├── api/              # FastAPI endpoints
+│   ├── templates/        # HTML templates
+│   ├── main.py           # FastAPI application
+│   ├── models.py         # SQLAlchemy models
+│   ├── schemas.py        # Pydantic schemas
+│   ├── crud.py           # Database operations
+│   ├── scanner.py        # Drive scanning logic
+│   └── database.py       # Database connection
+├── data/                 # SQLite database (gitignored)
+├── cli.py                # CLI entry point
+├── ext_drive_manager     # CLI symlink (main entry point)
+├── config.py             # Configuration settings
+├── pixi.toml             # Pixi configuration
+├── run.sh                # Start web server
+├── cli.sh                # CLI wrapper (legacy)
+├── migrate_db.py         # Database migration script
+└── README.md             # This file
 ```
+
+**Note:** Use `./ext_drive_manager` as the main CLI entry point. The `cli.sh` wrapper is kept for backwards compatibility.
 
 ## Contributing
 
