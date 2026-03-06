@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}Browse - Cold Storage Drive Manager{% endblock %}
+{% block content %}
+<h1>Browse Files</h1>
+
+<div class="card">
+    <h2>Filters</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+        <div class="form-group">
+            <label for="drive-filter">Drive</label>
+            <select id="drive-filter">
+                <option value="">All Drives</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="ext-filter">Extension</label>
+            <select id="ext-filter">
+                <option value="">All Extensions</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="size-min">Min Size (bytes)</label>
+            <input type="number" id="size-min" placeholder="0">
+        </div>
+        <div class="form-group">
+            <label for="size-max">Max Size (bytes)</label>
+            <input type="number" id="size-max" placeholder="∞">
+        </div>
+    </div>
+    <div style="margin-top: 15px;">
+        <button class="btn" onclick="applyFilters()">Apply Filters</button>
+        <button class="btn btn-secondary" onclick="resetFilters()">Reset</button>
+    </div>
+</div>
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h2>Files</h2>
+        <span id="result-count"></span>
+    </div>
+    <table id="files-table">
+        <thead>
+            <tr>
+                <th>Filename</th>
+                <th>Drive</th>
+                <th>Size</th>
+                <th>Extension</th>
+                <th>Modified</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td colspan="5" style="text-align:center;">Loading...</td></tr>
+        </tbody>
+    </table>
+    <div style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center;">
+        <button class="btn btn-secondary" id="prev-btn" onclick="changePage(-1)">Previous</button>
+        <span id="page-info">Page 1</span>
+        <button class="btn btn-secondary" id="next-btn" onclick="changePage(1)">Next</button>
+    </div>
+</div>
+
+<script>
+let currentPage = 0;
+const pageSize = 50;
+
+async function formatBytes(bytes) {
+    if (!bytes || bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+async function loadFilters() {
+    try {
+        const drivesResponse = await fetch('/api/drives/');
+        const drives = await drivesResponse.json();
+        const driveSelect = document.getElementById('drive-filter');
+        drives.forEach(d => {
+            const option = document.createElement('option');
+            option.value = d.id;
+            option.textContent = d.label;
+            driveSelect.appendChild(option);
+        });
+
+        const extResponse = await fetch('/api/files/extensions');
+        const extData = await extResponse.json();
+        const extSelect = document.getElementById('ext-filter');
+        extData.extensions.forEach(ext => {
+            if (ext) {
+                const option = document.createElement('option');
+                option.value = ext;
+                option.textContent = ext;
+                extSelect.appendChild(option);
+            }
+        });
+    } catch (error) {
+        console.error('Error loading filters:', error);
+    }
+}
+
+async function loadFiles() {
+    try {
+        const driveId = document.getElementById('drive-filter').value;
+        const extension = document.getElementById('ext-filter').value;
+        const minSize = document.getElementById('size-min').value;
+        const maxSize = document.getElementById('size-max').value;
+
+        const params = new URLSearchParams();
+        if (driveId) params.append('drive_id', driveId);
+        if (extension) params.append('extension', extension);
+        if (minSize) params.append('min_size', minSize);
+        if (maxSize) params.append('max_size', maxSize);
+        params.append('limit', pageSize);
+        params.append('offset', currentPage * pageSize);
+
+        const response = await fetch(`/api/files/search?${params}`);
+        const files = await response.json();
+
+        const tbody = document.querySelector('#files-table tbody');
+        if (files.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No files found</td></tr>';
+        } else {
+            tbody.innerHTML = await Promise.all(files.map(async f => `
+                <tr>
+                    <td><a href="/api/files/${f.id}">${f.filename}</a></td>
+                    <td>${f.drive_id}</td>
+                    <td>${await formatBytes(f.size)}</td>
+                    <td>${f.extension || '-'}</td>
+                    <td>${f.created_at ? new Date(f.created_at).toLocaleString() : '-'}</td>
+                </tr>
+            `)).then(html => html.join(''));
+        }
+
+        document.getElementById('page-info').textContent = `Page ${currentPage + 1}`;
+        document.getElementById('prev-btn').disabled = currentPage === 0;
+        document.getElementById('next-btn').disabled = files.length < pageSize;
+        document.getElementById('result-count').textContent = `${files.length} files shown`;
+    } catch (error) {
+        console.error('Error loading files:', error);
+    }
+}
+
+function applyFilters() {
+    currentPage = 0;
+    loadFiles();
+}
+
+function resetFilters() {
+    document.getElementById('drive-filter').value = '';
+    document.getElementById('ext-filter').value = '';
+    document.getElementById('size-min').value = '';
+    document.getElementById('size-max').value = '';
+    currentPage = 0;
+    loadFiles();
+}
+
+function changePage(delta) {
+    currentPage += delta;
+    if (currentPage < 0) currentPage = 0;
+    loadFiles();
+}
+
+loadFilters();
+loadFiles();
+</script>
+{% endblock %}

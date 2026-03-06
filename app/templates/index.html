@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - Cold Storage Drive Manager{% endblock %}
+{% block content %}
+<h1>Dashboard</h1>
+
+<div class="stats">
+    <div class="stat-card">
+        <div class="stat-value" id="total-drives">-</div>
+        <div class="stat-label">Total Drives</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" id="total-files">-</div>
+        <div class="stat-label">Total Files</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" id="total-size">-</div>
+        <div class="stat-label">Total Storage</div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Quick Actions</h2>
+    <a href="/drives" class="btn">Add New Drive</a>
+    <a href="/search" class="btn btn-secondary">Search Files</a>
+    <a href="/browse" class="btn btn-secondary">Browse Files</a>
+</div>
+
+<div class="card">
+    <h2>Recent Drives</h2>
+    <table id="drives-table">
+        <thead>
+            <tr>
+                <th>Label</th>
+                <th>Serial Number</th>
+                <th>Files</th>
+                <th>Size</th>
+                <th>Last Scanned</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td colspan="6" style="text-align:center;">Loading...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+async function formatBytes(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+async function loadStats() {
+    try {
+        const response = await fetch('/api/drives/');
+        const drives = await response.json();
+        
+        let totalFiles = 0;
+        let totalSize = 0;
+        
+        drives.forEach(d => {
+            totalFiles += d.total_files;
+            totalSize += d.total_size;
+        });
+        
+        document.getElementById('total-drives').textContent = drives.length;
+        document.getElementById('total-files').textContent = totalFiles.toLocaleString();
+        document.getElementById('total-size').textContent = await formatBytes(totalSize);
+        
+        const tbody = document.querySelector('#drives-table tbody');
+        if (drives.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No drives registered. <a href="/drives">Add one</a></td></tr>';
+        } else {
+            tbody.innerHTML = drives.map(d => `
+                <tr>
+                    <td><a href="/drives">${d.label}</a></td>
+                    <td>${d.serial_number || '-'}</td>
+                    <td>${d.total_files.toLocaleString()}</td>
+                    <td>${await formatBytes(d.total_size)}</td>
+                    <td>${d.last_scanned ? new Date(d.last_scanned).toLocaleString() : 'Never'}</td>
+                    <td><span class="badge ${d.last_scanned ? 'badge-online' : 'badge-offline'}">${d.last_scanned ? 'Online' : 'Offline'}</span></td>
+                </tr>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Error loading stats:', error);
+    }
+}
+
+loadStats();
+</script>
+{% endblock %}

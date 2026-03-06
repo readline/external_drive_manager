@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}CLI Commands - Cold Storage Drive Manager{% endblock %}
+{% block content %}
+<h1>CLI Commands Reference</h1>
+
+<div class="card">
+    <h2>📚 Quick Reference</h2>
+    <p>Use the command line interface (CLI) to manage drives and search files. All operations are performed via <code>./cli.sh</code>.</p>
+</div>
+
+<div class="card">
+    <h2>🗄️ Drive Management</h2>
+    
+    <h3>Add a new drive</h3>
+    <pre style="background: #0f3460; padding: 15px; border-radius: 4px; overflow-x: auto;"><code>./cli.sh drive add &lt;label&gt; --serial &lt;serial&gt; --path &lt;path&gt; --depth &lt;depth&gt;</code></pre>
+    <p><strong>Example:</strong></p>
+    <pre style="background: #1a254a; padding: 10px; border-radius: 4px;"><code>./cli.sh drive add 28T-02 --serial 00000000NT17P0Y8 --path /mnt/ext_2 --depth -1</code></pre>
+    
+    <h3>List all drives</h3>
+    <pre style="background: #0f3460; padding: 15px; border-radius: 4px; overflow-x: auto;"><code>./cli.sh drive list
+./cli.sh drive list --offline  # Show only unscanned drives</code></pre>
+    
+    <h3>Scan a drive</h3>
+    <pre style="background: #0f3460; padding: 15px; border-radius: 4px; overflow-x: auto;"><code>./cli.sh drive scan &lt;label&gt;</code></pre>
+    <p><strong>Example:</strong></p>
+    <pre style="background: #1a254a; padding: 10px; border-radius: 4px;"><code>./cli.sh drive scan 28T-02</code></pre>
+    <p><em>Note: This creates a <code>disk_scan.txt.gz</code> file on the drive with the scan results.</em></p>
+    
+    <h3>Remove a drive</h3>
+    <pre style="background: #0f3460; padding: 15px; border-radius: 4px; overflow-x: auto;"><code>./cli.sh drive remove &lt;label&gt;</code></pre>
+</div>
+
+<div class="card">
+    <h2>🔍 Search Files</h2>
+    
+    <h3>Basic search</h3>
+    <pre style="background: #0f3460; padding: 15px; border-radius: 4px; overflow-x: auto;"><code>./cli.sh search &lt;pattern&gt;</code></pre>
+    <p><strong>Examples:</strong></p>
+    <pre style="background: #1a254a; padding: 10px; border-radius: 4px;"><code>./cli.sh search "*.pdf"                    # All PDF files
+./cli.sh search "report*.docx"             # Files starting with "report"
+./cli.sh search "data???.txt"              # Use ? for single character
+./cli.sh search "*backup*"                 # Files containing "backup"</code></pre>
+    
+    <h3>Search with filters</h3>
+    <pre style="background: #0f3460; padding: 15px; border-radius: 4px; overflow-x: auto;"><code>./cli.sh search &lt;pattern&gt; [options]</code></pre>
+    <p><strong>Available options:</strong></p>
+    <ul style="margin-left: 20px; line-height: 2;">
+        <li><code>--drive &lt;label&gt;</code> - Filter by drive</li>
+        <li><code>--ext &lt;extension&gt;</code> - Filter by extension (e.g., .jpg)</li>
+        <li><code>--min-size &lt;size&gt;</code> - Minimum size (supports K, M, G, T)</li>
+        <li><code>--max-size &lt;size&gt;</code> - Maximum size (supports K, M, G, T)</li>
+        <li><code>--from-date &lt;date&gt;</code> - From date (ISO format)</li>
+        <li><code>--to-date &lt;date&gt;</code> - To date (ISO format)</li>
+        <li><code>--export &lt;file&gt;</code> - Export to CSV</li>
+    </ul>
+    
+    <p><strong>Examples:</strong></p>
+    <pre style="background: #1a254a; padding: 10px; border-radius: 4px;"><code>./cli.sh search "*.mov" --drive 28T-02 --min-size 1G
+./cli.sh search "*" --ext .jpg --max-size 10M
+./cli.sh search "data*" --from-date 2024-01-01 --to-date 2024-12-31
+./cli.sh search "*.csv" --export results.csv</code></pre>
+</div>
+
+<div class="card">
+    <h2>📊 Other Commands</h2>
+    
+    <h3>Get file details</h3>
+    <pre style="background: #0f3460; padding: 15px; border-radius: 4px; overflow-x: auto;"><code>./cli.sh file &lt;file_id&gt;</code></pre>
+    
+    <h3>Show statistics</h3>
+    <pre style="background: #0f3460; padding: 15px; border-radius: 4px; overflow-x: auto;"><code>./cli.sh stats</code></pre>
+</div>
+
+<div class="card">
+    <h2>💡 Tips</h2>
+    <ul style="margin-left: 20px; line-height: 2;">
+        <li>Search is <strong>case-sensitive</strong> and supports wildcards: <code>*</code> (any characters) and <code>?</code> (single character)</li>
+        <li>Size units: <code>K</code> (KB), <code>M</code> (MB), <code>G</code> (GB), <code>T</code> (TB)</li>
+        <li>Search looks in filename, relative path, and full path</li>
+        <li>Scanning creates a <code>disk_scan.txt.gz</code> backup on the drive</li>
+        <li>Use the <a href="/browse">Browse</a> and <a href="/search">Search</a> pages for interactive file exploration</li>
+    </ul>
+</div>
+
+<div class="card" style="background: #1a3a1a; border: 1px solid #2a5a3a;">
+    <h2>🚀 Web Interface</h2>
+    <p>The web interface provides interactive browsing and searching:</p>
+    <ul style="margin-left: 20px; line-height: 2;">
+        <li><a href="/">Dashboard</a> - View statistics and recent drives</li>
+        <li><a href="/browse">Browse</a> - Browse files with filters</li>
+        <li><a href="/search">Search</a> - Advanced search with filters</li>
+    </ul>
+    <p style="margin-top: 15px;"><strong>Note:</strong> Drive management (add/scan/remove) is only available via CLI.</p>
+</div>
+{% endblock %}

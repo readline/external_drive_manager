@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% block title %}Search - Cold Storage Drive Manager{% endblock %}
+{% block content %}
+<h1>Search Files</h1>
+
+<div class="card">
+    <h2>Search Query</h2>
+    <div class="form-group">
+        <label for="query">Search Pattern (use * and ? wildcards)</label>
+        <input type="text" id="query" placeholder="e.g., *.pdf, report*.doc, data???.txt" style="width: 100%;">
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+        <div class="form-group">
+            <label for="drive-filter">Drive</label>
+            <select id="drive-filter">
+                <option value="">All Drives</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="ext-filter">Extension</label>
+            <input type="text" id="ext-filter" placeholder=".pdf">
+        </div>
+        <div class="form-group">
+            <label for="size-min">Min Size (bytes)</label>
+            <input type="number" id="size-min" placeholder="0">
+        </div>
+        <div class="form-group">
+            <label for="size-max">Max Size (bytes)</label>
+            <input type="number" id="size-max" placeholder="∞">
+        </div>
+        <div class="form-group">
+            <label for="date-from">From Date</label>
+            <input type="datetime-local" id="date-from">
+        </div>
+        <div class="form-group">
+            <label for="date-to">To Date</label>
+            <input type="datetime-local" id="date-to">
+        </div>
+    </div>
+    <div style="margin-top: 15px;">
+        <button class="btn" onclick="searchFiles()">Search</button>
+        <button class="btn btn-secondary" onclick="resetSearch()">Reset</button>
+        <button class="btn btn-secondary" onclick="exportResults()">Export CSV</button>
+    </div>
+</div>
+
+<div class="card" id="results-card" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h2>Search Results</h2>
+        <span id="result-count"></span>
+    </div>
+    <table id="results-table">
+        <thead>
+            <tr>
+                <th>Filename</th>
+                <th>Drive</th>
+                <th>Path</th>
+                <th>Size</th>
+                <th>Extension</th>
+                <th>Modified</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+    <div style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center;">
+        <button class="btn btn-secondary" id="prev-btn" onclick="changePage(-1)">Previous</button>
+        <span id="page-info">Page 1</span>
+        <button class="btn btn-secondary" id="next-btn" onclick="changePage(1)">Next</button>
+    </div>
+</div>
+
+<script>
+let currentPage = 0;
+const pageSize = 50;
+
+async function formatBytes(bytes) {
+    if (!bytes || bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+async function loadDrives() {
+    try {
+        const response = await fetch('/api/drives/');
+        const drives = await response.json();
+        const select = document.getElementById('drive-filter');
+        drives.forEach(d => {
+            const option = document.createElement('option');
+            option.value = d.id;
+            option.textContent = d.label;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error loading drives:', error);
+    }
+}
+
+async function searchFiles() {
+    const query = document.getElementById('query').value;
+    const driveId = document.getElementById('drive-filter').value;
+    const extension = document.getElementById('ext-filter').value;
+    const minSize = document.getElementById('size-min').value;
+    const maxSize = document.getElementById('size-max').value;
+    const fromDate = document.getElementById('date-from').value;
+    const toDate = document.getElementById('date-to').value;
+
+    if (!query && !driveId && !extension && !minSize && !maxSize && !fromDate && !toDate) {
+        alert('Please enter at least one search criteria');
+        return;
+    }
+
+    currentPage = 0;
+    await performSearch(query, driveId, extension, minSize, maxSize, fromDate, toDate);
+}
+
+async function performSearch(query, driveId, extension, minSize, maxSize, fromDate, toDate) {
+    try {
+        const params = new URLSearchParams();
+        if (query) params.append('query', query);
+        if (driveId) params.append('drive_id', driveId);
+        if (extension) params.append('extension', extension);
+        if (minSize) params.append('min_size', minSize);
+        if (maxSize) params.append('max_size', maxSize);
+        if (fromDate) params.append('from_date', new Date(fromDate).toISOString());
+        if (toDate) params.append('to_date', new Date(toDate).toISOString());
+        params.append('limit', pageSize);
+        params.append('offset', currentPage * pageSize);
+
+        const response = await fetch(`/api/files/search?${params}`);
+        const files = await response.json();
+
+        const tbody = document.querySelector('#results-table tbody');
+        document.getElementById('results-card').style.display = 'block';
+
+        if (files.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No files found matching your criteria</td></tr>';
+            document.getElementById('result-count').textContent = '0 results';
+        } else {
+            tbody.innerHTML = await Promise.all(files.map(async f => `
+                <tr>
+                    <td>${f.filename}</td>
+                    <td>${f.drive_id}</td>
+                    <td>${f.relative_path || '/'}</td>
+                    <td>${await formatBytes(f.size)}</td>
+                    <td>${f.extension || '-'}</td>
+                    <td>${f.created_at ? new Date(f.created_at).toLocaleString() : '-'}</td>
+                </tr>
+            `)).then(html => html.join(''));
+            document.getElementById('result-count').textContent = `${files.length} results`;
+        }
+
+        document.getElementById('page-info').textContent = `Page ${currentPage + 1}`;
+        document.getElementById('prev-btn').disabled = currentPage === 0;
+        document.getElementById('next-btn').disabled = files.length < pageSize;
+    } catch (error) {
+        console.error('Error searching files:', error);
+        alert('Error performing search');
+    }
+}
+
+function resetSearch() {
+    document.getElementById('query').value = '';
+    document.getElementById('drive-filter').value = '';
+    document.getElementById('ext-filter').value = '';
+    document.getElementById('size-min').value = '';
+    document.getElementById('size-max').value = '';
+    document.getElementById('date-from').value = '';
+    document.getElementById('date-to').value = '';
+    document.getElementById('results-card').style.display = 'none';
+    currentPage = 0;
+}
+
+async function exportResults() {
+    const query = document.getElementById('query').value;
+    const driveId = document.getElementById('drive-filter').value;
+    const extension = document.getElementById('ext-filter').value;
+    const minSize = document.getElementById('size-min').value;
+    const maxSize = document.getElementById('size-max').value;
+    const fromDate = document.getElementById('date-from').value;
+    const toDate = document.getElementById('date-to').value;
+
+    const params = new URLSearchParams();
+    if (query) params.append('query', query);
+    if (driveId) params.append('drive_id', driveId);
+    if (extension) params.append('extension', extension);
+    if (minSize) params.append('min_size', minSize);
+    if (maxSize) params.append('max_size', maxSize);
+    if (fromDate) params.append('from_date', new Date(fromDate).toISOString());
+    if (toDate) params.append('to_date', new Date(toDate).toISOString());
+
+    window.open(`/api/export/csv?${params}`, '_blank');
+}
+
+function changePage(delta) {
+    currentPage += delta;
+    if (currentPage < 0) currentPage = 0;
+    
+    const query = document.getElementById('query').value;
+    const driveId = document.getElementById('drive-filter').value;
+    const extension = document.getElementById('ext-filter').value;
+    const minSize = document.getElementById('size-min').value;
+    const maxSize = document.getElementById('size-max').value;
+    const fromDate = document.getElementById('date-from').value;
+    const toDate = document.getElementById('date-to').value;
+    
+    performSearch(query, driveId, extension, minSize, maxSize, fromDate, toDate);
+}
+
+loadDrives();
+</script>
+{% endblock %}
